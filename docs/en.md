@@ -1,61 +1,168 @@
-# Demo Devices Template
+# Plausible Analytics
 
-This is the user documentation of the integration. Gladys re-hosts this file
-and shows a permanent **Documentation** link to it in the Configuration screen
-(in the user's language, with English as the fallback) — it is when
-configuring that the user needs it most. Keep the short onboarding hints in
-the `section` blocks of the manifest `config_schema`; put the long
-step-by-step (screenshots, troubleshooting…) here.
+[Plausible Analytics](https://plausible.io/) is a simple, privacy-friendly web
+analytics tool, open source (AGPL), on plausible.io or self-hosted (Community
+Edition). This integration brings the figures of your Plausible sites into
+Gladys: each site becomes a device with its visitors right now and its
+visitors, visits, page views, bounce rate, visit duration and most viewed page
+of the day. Scenes can react to a visitor spike, to the first visitor of the
+day, or to a site that receives no visit any more (a broken tracking script), a
+dashboard widget shows the day at a glance, and a scene action puts the figures
+of a site in a message.
 
-## What you get
+Tested against a real self-hosted Plausible Community Edition 3.2.1 (Docker,
+PostgreSQL and ClickHouse); not yet on plausible.io: feedback welcome on
+[the issues](https://github.com/guim31/gladys-plausible/issues).
 
-Six demo devices show up after installation: a weather station (real data
-from Open-Meteo), a switch, a dimmable light, a smart plug with power
-metering, a motion sensor and a camera.
+## What you need
 
-## Configuration
+- Gladys Assistant 5.1.0 or later.
+- A Plausible: on [plausible.io](https://plausible.io/), or your own server
+  (Community Edition 2.1 or later, the first with the Stats API v2), reachable
+  from the Gladys machine.
+- A **Stats API key** of your Plausible account.
+- The **domains** of the sites to follow, as written in Plausible (for example
+  `blog.example.org`): a Stats API key cannot list its sites.
 
-1. Open the **Configuration** tab of the integration.
-2. Set the **latitude** and **longitude** the demo weather station should
-   observe (they default to Paris), and pick your temperature unit.
-   The **refresh interval** sets how often the weather station and the
-   plug's power are read: every 5 minutes by default, every minute at most.
-3. Save: the devices appear in the **Discovery** tab, ready to be added.
+At each read the integration sends one request per site (the visitors right
+now). Every 15 minutes it also reads the figures of the day and the most viewed
+page (two requests per site), and, when nobody is on a site, the visits of the
+last hours. plausible.io accepts 600 requests per hour and key: there, the
+integration stretches the interval by itself to stay under 540 (with 20 sites,
+one read every 4 minutes). The Community Edition has no such limit.
 
-The **Prefer the local connection** toggle drives the demo plug: it reports
-the channel it actually uses as a badge (local or cloud), with an orange dot
-when it runs degraded (local refused, cloud fallback).
+## Getting started
 
-## Actions
+### 1. Create a Stats API key
 
-- **Test the weather provider** — performs a live request to Open-Meteo and
-  shows the current temperature and humidity under the button.
-- **Identify a device** — pick one of your devices in the list and it will
-  signal itself (the demo light "blinks" in the logs).
+In Plausible, open **Settings → API keys** (your account settings), click
+**New API key**, choose the **Stats API** type, and copy the key (it is shown
+only once).
 
-## Scenes
+### 2. Configure the integration
 
-The integration adds its own cards to the scene editor (Gladys 5.1 or
-later), under the **Integrations** category:
+In Gladys, open **Integrations → Plausible Analytics → Configuration**:
 
-- **Motion detected** (trigger) — starts the scene when a demo motion sensor
-  sees something move. Optionally pick the sensor and what moved (person,
-  animal); left empty, any detection matches. The following actions can
-  read what moved with `{{triggerEvent.data.target}}`.
-- **Identify a device** (action) — makes the chosen device signal itself.
-  It returns whether the device could signal itself, so the following
-  actions can depend on it.
+- **Plausible address**: empty for plausible.io, or the address of your server
+  (for example `http://192.168.1.10:8000`). An address copied from the browser
+  is understood.
+- **API key**: the Stats API key.
+- **Domains of the sites**: separated by commas, 25 at most.
+- **Visitors right now: interval**: 1, 2 or 5 minutes (1 minute by default).
+- **Visitor spike from**: the visitors at the same time that fire the "Visitor
+  spike" trigger (10 by default).
+- **No visit for (hours)**: the hours without any visit that fire the "No
+  visit for a while" trigger (24 by default).
+- **Language of the names**: language of the feature names and of the scene
+  results (French by default).
+
+Save, then click **Test the connection**: the result gives the number of
+sites, the visitors of the day and the visitors right now, and the domains
+Plausible refuses to the key, if any.
+
+### 3. Add the sites
+
+Open the **Discover** tab: each site is proposed under its domain. Add the ones
+you want to see in Gladys. The scene triggers and the widget work for every
+site, added or not.
+
+## The devices
+
+Each site becomes a device with:
+
+- **Visitors right now**: the visitors of the last 5 minutes, as in the
+  "current visitors" of Plausible.
+- **Visitors today**: unique visitors since midnight.
+- **Visits today**: visits (sessions) since midnight.
+- **Page views today**: page views since midnight.
+- **Bounce rate today**: the share of visits that saw a single page, in
+  percent.
+- **Visit duration today**: the average visit duration, in seconds.
+- **Most viewed page today**: its path, for example `/posts/hello`; "-" before
+  the first page view of the day.
+
+"Today" is the day of the site in Plausible, in the time zone set in its
+settings: the daily figures go back to 0 at its midnight. The visitors right
+now follow the interval of the configuration, the figures of the day are read
+every 15 minutes, and at once when a first visitor shows up. A value that does
+not change is sent again every 12 hours, so Gladys keeps it recent.
 
 ## Dashboard
 
-Add the **Demo status** widget to a dashboard: it shows the live
-temperature of the weather station and the power of the office plug, the
-connection the plug currently uses (orange when degraded) and the observed
-location. Its **Identify the light** button makes the demo light signal
-itself.
+The **Plausible today** widget shows four tiles (visitors right now, visitors,
+visits and page views of the day), added up over the sites shown, then one row
+per site with its visitors of the day and right now, the busiest first. With a
+single site, the most viewed page of the day is shown instead. In the widget
+settings, choose some sites to show only them (devices added to Gladys). The
+**Refresh** button reads Plausible again.
+
+## Scenes
+
+### Triggers
+
+- **Visitor spike**: the visitors right now of a site reach the threshold of
+  the configuration. Once per spike, and 30 minutes at least between two
+  announcements for a site: a spike still under way at the end of the pause is
+  announced then. Variables: domain, visitors right now, threshold.
+- **First visitor of the day**: a site receives its first visitor since its
+  midnight. Variables: domain, visitors today. If the integration was stopped,
+  the first visitor is announced at the first read after it starts again.
+- **No visit for a while**: a site that had visits receives none for the hours
+  of the configuration: the tracking script may be broken, or the site down.
+  Once, until a visit comes again. Variables: domain, hours without a visit.
+
+Each trigger can be limited to some sites (empty: any). What the triggers
+remember is kept in the `/data` volume: a restart of Gladys or of the
+integration does not announce a spike or a first visitor twice. Nothing is
+announced at the first read of a site: a spike or a silence already under way
+is only recorded.
+
+### Actions
+
+- **Read the figures of a site**: gives the domain (`name`), the visitors right
+  now (`active`), the `visitors`, `visits`, `pageviews`, `bounce_rate` and
+  `visit_duration` of the day, the `top_page`, and a ready-made `sentence`, for
+  example "blog.example.org: 132 visitor(s) and 410 page view(s) today, 4 right
+  now, most viewed page /posts/hello.".
+
+### Scene ideas
+
+- When **Visitor spike** fires for your shop, send a Telegram message "Rush on
+  {{domain}}: {{visitors}} visitors right now".
+- When **No visit for a while** fires, send a notification "No visit on
+  {{domain}} for {{hours}} h: check the tracking script".
+- Every evening at 21:00, **Read the figures of a site** and send the
+  `sentence` by message.
+- With the device feature **Visitors right now** as a scene condition, light a
+  lamp in green while someone is on the site.
 
 ## Troubleshooting
 
-The integration logs everything it does: check the integration logs from the
-Gladys UI (or `docker logs` on the host) with `LOG_LEVEL=debug` for the full
-detail.
+- **"Paste a Stats API key"**: the key is empty.
+- **"Enter the domains of your sites"**: no domain could be read; write them as
+  in Plausible, separated by commas.
+- **"API key refused, or no domain known to Plausible"**: Plausible answers the
+  same way to a wrong key and to a site the key cannot see. Copy the key again
+  (type Stats API), and check the domains. If only some domains are refused,
+  the others are read, and **Test the connection** names the refused ones.
+- **"no Plausible Stats API at this address"**: check the address and the port
+  (8000 by default), and the version (Community Edition 2.1 or later).
+- **"the address redirects"**: enter the `https://` address directly.
+- **"too many requests"**: choose a longer interval, or follow fewer sites.
+- The logs of the integration (**Integrations → Plausible Analytics**) say
+  more; nothing is written there during a normal reading cycle.
+
+## Limits
+
+- Read-only: the integration does not change anything in Plausible.
+- The domains are typed by hand: a Stats API key cannot list the sites (the
+  Sites API is not in the Community Edition, and an Enterprise feature on
+  plausible.io). A site renamed in Plausible must be renamed in the
+  configuration, and becomes a new device.
+- "Visitors right now" is the 5-minute window of Plausible; the figures of the
+  day are at most 15 minutes old, except at the first visitor.
+- One Plausible account (plausible.io or a server) per integration, 25 sites at
+  most.
+- The thresholds of "Visitor spike" and "No visit for a while" are the same for
+  every site.
+- Not tested on plausible.io yet, and not affiliated with Plausible Insights OÜ.

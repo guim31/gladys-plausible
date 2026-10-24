@@ -32,15 +32,19 @@ pushing.
 
 ```
 index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
+src/app.js                        registers every SDK handler on the hub (shared with the tests)
+src/hub.js                        reading timer, states, scene events, connection status, badges
+src/plausible/client.js           Stats API client (realtime v1, query v2), errors, no redirects
+src/devices.js                    one device per site (external id = domain), features, states
 src/scenes.js                     scene action handlers (manifest `scene_actions`)
 src/widgets.js                    dashboard widget handlers (manifest `widgets`)
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
+src/texts.js                      texts sent to Gladys, in four languages
+src/store.js, src/problems.js     /data persistence of the triggers, one log line per problem
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (en and fr mandatory)
 test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+test/fixtures/plausible/          real answers of Plausible CE 3.2.1
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +74,10 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in English, French, German ("du") and Spanish
+  ("usted"): action messages, widget texts, feature names, manifest texts, and
+  `docs/en.md`, `docs/fr.md`, `docs/de.md`, `docs/es.md`, kept in sync
+  (`test/i18n.test.js`).
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -197,6 +203,37 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
 - Les filtres de scène ne font qu'égalité et appartenance : un seuil reste le travail d'un capteur.
 - **Les clés de widgets, de déclencheurs et d'actions sont figées une fois publiées.**
 - `gladys_version` `>=5.1.0` dès qu'il y a widgets, déclencheurs ou actions de scène.
+
+## Plausible (propre à ce dépôt)
+
+- **API** (vérifiée sur Plausible **CE 3.2.1**, `ghcr.io/plausible/community-edition:v3.2.1`, Postgres 16
+  et ClickHouse 24.12, 24/10/2026) : `GET /api/v1/stats/realtime/visitors?site_id=<domaine>` répond un
+  **nombre nu** (visiteurs des 5 dernières minutes) ; `POST /api/v2/query` répond
+  `{ results: [{ metrics, dimensions }], meta, query }`, les métriques **dans l'ordre demandé**, et
+  `query.date_range` résolu dans le **fuseau du site** (`["2026-10-24T00:00:00+02:00", …]`) : on en tire
+  le jour du site. La v2 **n'a pas de plage temps réel** (`"realtime"`, `"30m"` → 400) : le temps réel
+  reste en v1. Une plage personnalisée accepte des ISO 8601 en `Z`. `bounce_rate` est déjà en %,
+  `visit_duration` en secondes.
+- **Clé** : type « Stats API » (portée `stats:read:*`), en `Authorization: Bearer`. **Mauvaise clé et
+  site inconnu répondent pareil** (401, même message) : tous les sites refusés = erreur `auth` globale ;
+  certains seulement = ces sites sont mis de côté (`site.refused`, une ligne de log, nommés par « Tester
+  la connexion », absents de la Découverte). Une route inconnue répond une **page HTML 404** :
+  `not_plausible`.
+- **Pas de liste des sites** : `GET /api/v1/sites` (Sites API) répond 404 en CE, et la création d'une
+  clé Sites API y renvoie `:upgrade_required` ; sur plausible.io c'est une option Enterprise. Les
+  domaines sont donc saisis (`sites`, 25 au plus). L'`external_id` d'appareil est le domaine.
+- **Quotas** : plausible.io = 600 requêtes/heure/clé ; CE = 1 000 000 (`ApiKey.hourly_request_limit`).
+  Sur le cloud, `readIntervalMs` allonge l'intervalle pour rester sous 540/h (60 min/intervalle + 12 par
+  site et par heure pour le jour, la page la plus vue et la fenêtre de silence).
+- **Cadence** : temps réel à l'intervalle choisi (1, 2 ou 5 min) ; jour + page la plus vue toutes les
+  15 min, **tout de suite** si un premier visiteur apparaît (actif > 0 et visiteurs du jour à 0) ou au
+  changement de jour de Gladys ; fenêtre de silence toutes les 15 min, sautée si quelqu'un est là.
+- **Déclencheurs** repris d'Umami (`visitor_spike`, `first_visitor`, `website_silent`), variable
+  `domain` (pas de `website` : le nom d'un site Plausible est son domaine). Premier visiteur = jour
+  **du site** (d'après `query.date_range`). État dans `/data/plausible-state.json`.
+- Pour tester : un site créé par `rpc` (`Plausible.Sites.create/2`), une clé par
+  `Plausible.Auth.create_stats_api_key/4`, des visites `POST /api/event` avec un `User-Agent` de
+  navigateur et un `X-Forwarded-For` différent par visiteur (202).
 
 ## Store
 
