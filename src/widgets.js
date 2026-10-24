@@ -178,7 +178,8 @@ async function action(hub, { actionKey }) {
   if (actionKey !== ACTIONS.REFRESH) {
     throw new Error(`Unknown action ${actionKey}`);
   }
-  await hub.pollNow();
+  // Not more often than every 15 seconds: Plausible may limit the requests.
+  await hub.refreshIfStale();
   if (hub.error) {
     return { message: ERROR_TEXT[hub.error.kind] };
   }

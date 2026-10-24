@@ -115,9 +115,7 @@ angelegte Geräte). Die Schaltfläche **Aktualisieren** liest Plausible neu.
   noch läuft, wird dann gemeldet. Variablen: Domain, Besucher gerade jetzt,
   Schwelle.
 - **Erster Besucher des Tages**: Eine Website empfängt ihren ersten Besucher
-  seit ihrer Mitternacht. Variablen: Domain, Besucher heute. War die
-  Integration gestoppt, wird der erste Besucher beim ersten Lesen nach dem
-  Neustart gemeldet.
+  seit ihrer Mitternacht. Variablen: Domain, Besucher heute. Ein erster Besucher, der ungesehen kam (Integration gestoppt, Plausible nicht erreichbar oder Domain verweigert, länger als etwa 15 Minuten), wird nicht gemeldet.
 - **Länger kein Besuch**: Eine Website mit Besuchen erhält für die Stunden der
   Konfiguration keine mehr: Vielleicht ist das Tracking-Skript kaputt oder die
   Website ausgefallen. Einmal, bis wieder ein Besuch kommt. Variablen: Domain,

@@ -219,9 +219,15 @@ test('first visitor of the day: once a day, on the day of the site, not at the f
   world.clock.advance(HUB_TIMINGS.dayEveryMs);
   await world.hub.pollNow();
   assert.equal(events(world, TRIGGERS.FIRST_VISITOR).length, 1);
-  // The next day of the sites.
+  // The next day of the sites: empty at first, then visited.
   for (const domain of [BLOG, SHOP]) {
     world.plausible.set(domain, { day: '2026-10-16' });
+    world.plausible.setToday(domain, { visitors: 0 });
+  }
+  world.clock.advance(HUB_TIMINGS.dayEveryMs);
+  await world.hub.pollNow();
+  for (const domain of [BLOG, SHOP]) {
+    world.plausible.setToday(domain, { visitors: 2 });
   }
   world.clock.advance(HUB_TIMINGS.dayEveryMs);
   await world.hub.pollNow();
@@ -229,6 +235,29 @@ test('first visitor of the day: once a day, on the day of the site, not at the f
     events(world, TRIGGERS.FIRST_VISITOR).map((event) => event.data.domain),
     [SHOP, BLOG, SHOP],
   );
+});
+
+test('visits that arrived during an outage are not announced as a first visitor', async (t) => {
+  const world = await createWorld();
+  t.after(() => world.app.stop());
+  world.plausible.failure = 'down';
+  world.clock.advance(3 * 3600_000);
+  await world.hub.pollNow();
+  world.plausible.failure = null;
+  world.plausible.setToday(SHOP, { visitors: 30, visits: 30, pageviews: 40 });
+  world.clock.advance(MINUTE);
+  await world.hub.pollNow();
+  assert.equal(events(world, TRIGGERS.FIRST_VISITOR).length, 0);
+});
+
+test('a site whose day ends before the day of Gladys is read again at its midnight', async (t) => {
+  const world = await createWorld();
+  t.after(() => world.app.stop());
+  world.plausible.requests = [];
+  // The fake site's day ends at 23:59:59+02:00; one minute later, the day is read again.
+  world.clock.time = Date.parse('2026-10-15T22:01:00Z');
+  await world.hub.pollNow();
+  assert.ok(kinds(world).includes('day'));
 });
 
 test('no visit for N hours: when the window empties, once, and again after visits', async (t) => {

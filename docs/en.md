@@ -105,8 +105,7 @@ settings, choose some sites to show only them (devices added to Gladys). The
   announcements for a site: a spike still under way at the end of the pause is
   announced then. Variables: domain, visitors right now, threshold.
 - **First visitor of the day**: a site receives its first visitor since its
-  midnight. Variables: domain, visitors today. If the integration was stopped,
-  the first visitor is announced at the first read after it starts again.
+  midnight. Variables: domain, visitors today. A first visitor that arrived unseen (integration stopped, Plausible unreachable or the domain refused for more than about 15 minutes) is not announced.
 - **No visit for a while**: a site that had visits receives none for the hours
   of the configuration: the tracking script may be broken, or the site down.
   Once, until a visit comes again. Variables: domain, hours without a visit.

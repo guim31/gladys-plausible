@@ -33,6 +33,7 @@ test('the real answers of Plausible CE 3.2.1', async () => {
   assert.equal(await client.realtime('blog.example.org'), 6);
   assert.deepEqual(await client.today('blog.example.org'), {
     day: '2026-10-24',
+    dayEnd: Date.parse('2026-10-24T23:59:59+02:00'),
     visitors: 6,
     visits: 6,
     pageviews: 8,
@@ -43,6 +44,7 @@ test('the real answers of Plausible CE 3.2.1', async () => {
   assert.equal(await client.visits('blog.example.org', 0, 1), 6);
   assert.deepEqual(await client.today('shop.example.org'), {
     day: '2026-10-24',
+    dayEnd: Date.parse('2026-10-24T23:59:59+02:00'),
     visitors: 1,
     visits: 1,
     pageviews: 1,
@@ -122,7 +124,7 @@ test('a 400 keeps the explanation of Plausible for the logs', async () => {
   });
 });
 
-test('plausible.io by default, the requests of the last hour counted', async () => {
+test('plausible.io by default', async () => {
   const calls = [];
   const client = new PlausibleClient({
     url: '',
@@ -135,8 +137,6 @@ test('plausible.io by default, the requests of the last hour counted', async () 
   assert.equal(client.cloud, true);
   assert.equal(await client.realtime('blog.example.org'), 3);
   assert.ok(calls[0].startsWith(`${CLOUD_URL}/api/v1/`));
-  assert.equal(client.sentLastHour(), 1);
-  assert.equal(client.sentLastHour(Date.now() + 3600_000), 0);
 });
 
 test('counts and days', () => {

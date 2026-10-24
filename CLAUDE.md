@@ -230,7 +230,10 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
   changement de jour de Gladys ; fenêtre de silence toutes les 15 min, sautée si quelqu'un est là.
 - **Déclencheurs** repris d'Umami (`visitor_spike`, `first_visitor`, `website_silent`), variable
   `domain` (pas de `website` : le nom d'un site Plausible est son domaine). Premier visiteur = jour
-  **du site** (d'après `query.date_range`). État dans `/data/plausible-state.json`.
+  **du site** (d'après `query.date_range`), annoncé seulement si le site a été lu **à 0 visiteur ce
+  jour-là peu avant** (`zeroDay`/`zeroAt` dans `/data`, ≤ 15 min + intervalle + 1 min) : pas d'annonce
+  tardive après une panne, un arrêt long ou un domaine refusé (relecture indépendante du 24/10). Le jour
+  est relu dès que `query.date_range[1]` est dépassé (fuseau du site ≠ fuseau de Gladys). État dans `/data/plausible-state.json`.
 - Pour tester : un site créé par `rpc` (`Plausible.Sites.create/2`), une clé par
   `Plausible.Auth.create_stats_api_key/4`, des visites `POST /api/event` avec un `User-Agent` de
   navigateur et un `X-Forwarded-For` différent par visiteur (202).

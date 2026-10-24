@@ -165,6 +165,8 @@ export class PlausibleHub {
     if (languageChanged) {
       this.discovered = null; // new names for the Discovery tab
     }
+    // A read in progress uses the previous list: let it end, then read again.
+    await this.polling?.catch(() => {});
     try {
       if (this.client) {
         await this.pollNow({ publish: true });
@@ -213,7 +215,11 @@ export class PlausibleHub {
 
   /** Read again when the last read failed or is older than `freshMs` (scene actions). */
   async refreshIfStale() {
-    if (this.client && (this.error || this.now() - this.readAt >= this.timings.freshMs)) {
+    const limited = this.error?.kind === ERROR_KINDS.RATE_LIMIT;
+    if (
+      this.client &&
+      ((this.error && !limited) || this.now() - this.readAt >= this.timings.freshMs)
+    ) {
       await this.pollNow();
     }
   }
@@ -258,25 +264,28 @@ export class PlausibleHub {
   async readSites(client) {
     const now = this.now();
     let refusal = null;
+    const refused = new Set();
     for (const site of [...this.sites.values()]) {
       try {
         await this.readSite(client, site, now);
-        site.refused = false;
       } catch (err) {
         if (!(err instanceof PlausibleError && err.kind === ERROR_KINDS.AUTH)) {
           throw err;
         }
         refusal = err;
-        if (client === this.client && !site.refused) {
-          logger.warn(
-            `${site.id}: not readable with this key (unknown domain, or another account)`,
-          );
-        }
-        site.refused = true;
+        refused.add(site);
       }
     }
-    if (refusal && [...this.sites.values()].every((site) => site.refused)) {
+    if (refusal && refused.size === this.sites.size) {
+      // Every site refused: the key, one error (the per-site flags stay).
       throw refusal;
+    }
+    for (const site of this.sites.values()) {
+      const now = refused.has(site);
+      if (now && !site.refused && client === this.client) {
+        logger.warn(`${site.id}: not readable with this key (unknown domain, or another account)`);
+      }
+      site.refused = now;
     }
   }
 
@@ -287,15 +296,17 @@ export class PlausibleHub {
       !site.today ||
       now - site.dayAt >= this.timings.dayEveryMs ||
       site.localDay !== localDay ||
+      // The day of the site is over (its time zone may not be the one of Gladys).
+      (site.dayEnd !== null && now >= site.dayEnd + 1000) ||
       // A first visitor: the figures of the day at once.
       (active > 0 && site.today.visitors === 0);
-    let { today, day, topPage, topViews, dayAt } = site;
+    let { today, day, dayEnd, topPage, dayAt } = site;
     if (dayDue) {
       today = await client.today(site.id);
       day = today.day ?? localDay;
+      dayEnd = today.dayEnd;
       const top = today.pageviews > 0 ? await client.topPage(site.id) : null;
       topPage = top?.path ?? null;
-      topViews = top?.views ?? 0;
       dayAt = now;
     }
     // Visitors right now, or a new visit today: not silent, no request needed.
@@ -315,9 +326,9 @@ export class PlausibleHub {
       active,
       today,
       day,
+      dayEnd,
       localDay,
       topPage,
-      topViews,
       dayAt,
       silent,
       silenceAt,
@@ -404,9 +415,18 @@ export class PlausibleHub {
       saved.spike = false;
     }
 
-    if (site.today?.visitors > 0 && saved.firstDay !== site.day) {
+    // The first visitor is announced when the integration saw the site
+    // without a visitor that day shortly before: not after an outage, a
+    // refused period or a long stop, when the visits arrived unseen.
+    if (site.today?.visitors === 0) {
+      saved.zeroDay = site.day;
+      saved.zeroAt = now;
+    } else if (site.today?.visitors > 0 && saved.firstDay !== site.day) {
       saved.firstDay = site.day;
-      if (!first) {
+      const seenEmpty =
+        saved.zeroDay === site.day &&
+        now - (saved.zeroAt || 0) <= this.timings.dayEveryMs + this.intervalMs() + 60_000;
+      if (!first && seenEmpty) {
         await this.fire(TRIGGERS.FIRST_VISITOR, site, { visitors: site.today.visitors });
       }
     }
@@ -534,10 +554,11 @@ export class PlausibleHub {
       transport = DEVICE_TRANSPORTS.UNREACHABLE;
     }
     const entries = [];
-    for (const id of this.sites.keys()) {
+    for (const [id, site] of this.sites) {
       const externalId = siteIds(this.gladys, id).device;
-      if (this.isCreated(externalId) && this.transports.get(externalId) !== transport) {
-        entries.push({ external_id: externalId, transport });
+      const badge = site.refused ? DEVICE_TRANSPORTS.UNREACHABLE : transport;
+      if (this.isCreated(externalId) && this.transports.get(externalId) !== badge) {
+        entries.push({ external_id: externalId, transport: badge });
       }
     }
     for (let at = 0; at < entries.length; at += MAX_TRANSPORTS_PER_REQUEST) {
@@ -633,10 +654,10 @@ export function blankSite(domain) {
     active: null,
     today: null,
     day: null,
+    dayEnd: null,
     localDay: null,
     dayAt: 0,
     topPage: null,
-    topViews: 0,
     silent: null,
     silenceAt: 0,
     refused: false,

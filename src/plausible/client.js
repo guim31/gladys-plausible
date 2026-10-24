@@ -104,6 +104,12 @@ function parse(body) {
 }
 
 /** The day of a v2 answer, `YYYY-MM-DD`, from its resolved date range (the site's time zone). */
+/** The end of the day of a v2 answer, in milliseconds, null when unknown. */
+export function dayEndOf(data) {
+  const end = Date.parse(data?.query?.date_range?.[1]);
+  return Number.isFinite(end) ? end : null;
+}
+
 export function dayOf(data) {
   const start = data?.query?.date_range?.[0];
   return typeof start === 'string' && /^\d{4}-\d{2}-\d{2}/.test(start) ? start.slice(0, 10) : null;
@@ -123,18 +129,9 @@ export class PlausibleClient {
     this.apiKey = apiKey;
     this.request = request ?? httpRequest;
     this.timeoutMs = timeoutMs;
-    /** Times of the requests of the last hour (plausible.io rate limit). */
-    this.sent = [];
-  }
-
-  /** Requests sent during the last hour. */
-  sentLastHour(now = Date.now()) {
-    this.sent = this.sent.filter((time) => now - time < 3600_000);
-    return this.sent.length;
   }
 
   async send(path, { method = 'GET', body } = {}) {
-    this.sent.push(Date.now());
     const headers = { accept: 'application/json', authorization: `Bearer ${this.apiKey}` };
     if (body !== undefined) {
       headers['content-type'] = 'application/json';
@@ -208,7 +205,7 @@ export class PlausibleClient {
 
   /**
    * Today's figures, "today" in the time zone of the site in Plausible.
-   * @returns {Promise<{ day: string|null, visitors: number, visits: number, pageviews: number, bounceRate: number, visitDuration: number }>}
+   * @returns {Promise<{ day: string|null, dayEnd: number|null, visitors: number, visits: number, pageviews: number, bounceRate: number, visitDuration: number }>}
    */
   async today(site) {
     const data = await this.query(site, { metrics: DAY_METRICS, date_range: 'day' });
@@ -219,6 +216,7 @@ export class PlausibleClient {
     const [visitors, visits, pageviews, bounceRate, visitDuration] = metrics.map(count);
     return {
       day: dayOf(data),
+      dayEnd: dayEndOf(data),
       visitors,
       visits,
       pageviews,

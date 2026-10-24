@@ -109,9 +109,7 @@ vuelve a leer Plausible.
   dos avisos para un sitio: un pico que sigue al final de la pausa se anuncia
   entonces. Variables: dominio, visitantes ahora mismo, umbral.
 - **Primer visitante del día**: un sitio recibe su primer visitante desde su
-  medianoche. Variables: dominio, visitantes hoy. Si la integración estaba
-  detenida, el primer visitante se anuncia en la primera lectura tras su
-  reinicio.
+  medianoche. Variables: dominio, visitantes hoy. Un primer visitante que llegó sin ser visto (integración detenida, Plausible inaccesible o dominio rechazado durante más de unos 15 minutos) no se anuncia.
 - **Sin visitas desde hace un tiempo**: un sitio que tenía visitas no recibe
   ninguna durante las horas de la configuración: quizá el script de
   seguimiento falla, o el sitio está caído. Una vez, hasta que vuelva una

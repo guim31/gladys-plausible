@@ -110,9 +110,7 @@ Plausible.
   deux annonces pour un site : un pic qui dure encore à la fin de la pause est
   annoncé à ce moment-là. Variables : domaine, visiteurs en ce moment, seuil.
 - **Premier visiteur de la journée** : un site reçoit son premier visiteur
-  depuis son minuit. Variables : domaine, visiteurs aujourd'hui. Si
-  l'intégration était arrêtée, le premier visiteur est annoncé à la première
-  lecture après son redémarrage.
+  depuis son minuit. Variables : domaine, visiteurs aujourd'hui. Un premier visiteur arrivé sans être vu (intégration arrêtée, Plausible injoignable ou domaine refusé pendant plus d'environ 15 minutes) n'est pas annoncé.
 - **Aucune visite depuis un moment** : un site qui avait des visites n'en
   reçoit plus pendant les heures de la configuration : le script de suivi est
   peut-être cassé, ou le site en panne. Une fois, jusqu'au retour d'une visite.
