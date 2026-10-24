@@ -1,0 +1,113 @@
+{
+  "source": "Plausible Community Edition v3.2.1 (ghcr.io/plausible/community-edition:v3.2.1) in Docker, 24/10/2026, test sites blog.example.org and shop.example.org fed through /api/event",
+  "exchanges": [
+    {
+      "path": "/api/v1/stats/realtime/visitors?site_id=blog.example.org",
+      "request": null,
+      "status": 200,
+      "answer": "6"
+    },
+    {
+      "path": "/api/v2/query",
+      "request": {
+        "site_id": "blog.example.org",
+        "metrics": ["visitors", "visits", "pageviews", "bounce_rate", "visit_duration"],
+        "date_range": "day"
+      },
+      "status": 200,
+      "answer": "{\"results\":[{\"metrics\":[6,6,8,67,0],\"dimensions\":[]}],\"meta\":{},\"query\":{\"site_id\":\"blog.example.org\",\"metrics\":[\"visitors\",\"visits\",\"pageviews\",\"bounce_rate\",\"visit_duration\"],\"date_range\":[\"2026-10-24T00:00:00+02:00\",\"2026-10-24T23:59:59+02:00\"],\"filters\":[],\"dimensions\":[],\"order_by\":[[\"visitors\",\"desc\"]],\"include\":{},\"pagination\":{\"offset\":0,\"limit\":10000}}}"
+    },
+    {
+      "path": "/api/v2/query",
+      "request": {
+        "site_id": "blog.example.org",
+        "metrics": ["pageviews"],
+        "date_range": "day",
+        "dimensions": ["event:page"],
+        "order_by": [["pageviews", "desc"]],
+        "pagination": {
+          "limit": 1
+        }
+      },
+      "status": 200,
+      "answer": "{\"results\":[{\"metrics\":[6],\"dimensions\":[\"/posts/hello\"]}],\"meta\":{},\"query\":{\"site_id\":\"blog.example.org\",\"metrics\":[\"pageviews\"],\"date_range\":[\"2026-10-24T00:00:00+02:00\",\"2026-10-24T23:59:59+02:00\"],\"filters\":[],\"dimensions\":[\"event:page\"],\"order_by\":[[\"pageviews\",\"desc\"]],\"include\":{},\"pagination\":{\"offset\":0,\"limit\":1}}}"
+    },
+    {
+      "path": "/api/v2/query",
+      "request": {
+        "site_id": "blog.example.org",
+        "metrics": ["visits"],
+        "date_range": ["2026-10-23T14:35:38.130Z", "2026-10-24T14:35:38.130Z"]
+      },
+      "status": 200,
+      "answer": "{\"results\":[{\"metrics\":[6],\"dimensions\":[]}],\"meta\":{},\"query\":{\"site_id\":\"blog.example.org\",\"metrics\":[\"visits\"],\"date_range\":[\"2026-10-23T16:35:38+02:00\",\"2026-10-24T16:35:38+02:00\"],\"filters\":[],\"dimensions\":[],\"order_by\":[[\"visits\",\"desc\"]],\"include\":{},\"pagination\":{\"offset\":0,\"limit\":10000}}}"
+    },
+    {
+      "path": "/api/v1/stats/realtime/visitors?site_id=shop.example.org",
+      "request": null,
+      "status": 200,
+      "answer": "1"
+    },
+    {
+      "path": "/api/v2/query",
+      "request": {
+        "site_id": "shop.example.org",
+        "metrics": ["visitors", "visits", "pageviews", "bounce_rate", "visit_duration"],
+        "date_range": "day"
+      },
+      "status": 200,
+      "answer": "{\"results\":[{\"metrics\":[1,1,1,100,0],\"dimensions\":[]}],\"meta\":{},\"query\":{\"site_id\":\"shop.example.org\",\"metrics\":[\"visitors\",\"visits\",\"pageviews\",\"bounce_rate\",\"visit_duration\"],\"date_range\":[\"2026-10-24T00:00:00+02:00\",\"2026-10-24T23:59:59+02:00\"],\"filters\":[],\"dimensions\":[],\"order_by\":[[\"visitors\",\"desc\"]],\"include\":{},\"pagination\":{\"offset\":0,\"limit\":10000}}}"
+    },
+    {
+      "path": "/api/v2/query",
+      "request": {
+        "site_id": "shop.example.org",
+        "metrics": ["pageviews"],
+        "date_range": "day",
+        "dimensions": ["event:page"],
+        "order_by": [["pageviews", "desc"]],
+        "pagination": {
+          "limit": 1
+        }
+      },
+      "status": 200,
+      "answer": "{\"results\":[{\"metrics\":[1],\"dimensions\":[\"/cart\"]}],\"meta\":{},\"query\":{\"site_id\":\"shop.example.org\",\"metrics\":[\"pageviews\"],\"date_range\":[\"2026-10-24T00:00:00+02:00\",\"2026-10-24T23:59:59+02:00\"],\"filters\":[],\"dimensions\":[\"event:page\"],\"order_by\":[[\"pageviews\",\"desc\"]],\"include\":{},\"pagination\":{\"offset\":0,\"limit\":1}}}"
+    },
+    {
+      "path": "/api/v2/query",
+      "request": {
+        "site_id": "shop.example.org",
+        "metrics": ["visits"],
+        "date_range": ["2026-10-23T14:35:38.219Z", "2026-10-24T14:35:38.219Z"]
+      },
+      "status": 200,
+      "answer": "{\"results\":[{\"metrics\":[1],\"dimensions\":[]}],\"meta\":{},\"query\":{\"site_id\":\"shop.example.org\",\"metrics\":[\"visits\"],\"date_range\":[\"2026-10-23T16:35:38+02:00\",\"2026-10-24T16:35:38+02:00\"],\"filters\":[],\"dimensions\":[],\"order_by\":[[\"visits\",\"desc\"]],\"include\":{},\"pagination\":{\"offset\":0,\"limit\":10000}}}"
+    },
+    {
+      "path": "/api/v1/stats/realtime/visitors?site_id=nope.example.org",
+      "request": null,
+      "status": 401,
+      "answer": "{\"error\":\"Invalid API key or site ID. Please make sure you're using a valid API key with access to the site you've requested.\"}"
+    },
+    {
+      "path": "/api/v2/query",
+      "request": {
+        "site_id": "blog.example.org",
+        "metrics": ["visitors", "visits", "pageviews", "bounce_rate", "visit_duration"],
+        "date_range": "day"
+      },
+      "status": 401,
+      "answer": "{\"error\":\"Invalid API key or site ID. Please make sure you're using a valid API key with access to the site you've requested.\"}"
+    },
+    {
+      "path": "/x/api/v2/query",
+      "request": {
+        "site_id": "blog.example.org",
+        "metrics": ["visitors", "visits", "pageviews", "bounce_rate", "visit_duration"],
+        "date_range": "day"
+      },
+      "status": 404,
+      "answer": "{\"message\":\"Not Found\",\"status\":404}"
+    }
+  ]
+}

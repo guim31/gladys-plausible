@@ -30,6 +30,17 @@ Gladys before reporting a problem.
 
 In scope: the code of this repository and the Docker image it publishes.
 
+What the integration handles:
+
+- the **Stats API key** of a Plausible account, stored by Gladys in the
+  integration configuration (never written to `/data`, never logged); it is
+  only sent to the address configured (or to `https://plausible.io`), and
+  redirects are not followed so it never reaches another host. A Stats API key
+  is read-only;
+- `/data/plausible-state.json`: what the scene triggers remember per site
+  (spike under way, day of the first visitor, silent or not; no secret);
+- network: HTTP(S) requests to Plausible, nothing else; no port is opened.
+
 Out of scope: Gladys Assistant itself (see its
 [security policy](https://github.com/GladysAssistant/Gladys/security/policy)),
-and the third-party services and devices the integration talks to.
+and Plausible itself (plausible.io or the self-hosted server).

@@ -1,67 +1,178 @@
-# Template de démonstration
+# Plausible Analytics
 
-Ceci est la documentation utilisateur de l'intégration. Gladys ré-héberge ce
-fichier et affiche un lien **Documentation** permanent vers lui dans l'écran
-de configuration (dans la langue de l'utilisateur, avec l'anglais en repli) —
-c'est au moment de configurer que l'utilisateur en a le plus besoin. Gardez
-les courtes indications d'accueil dans les blocs `section` du `config_schema`
-du manifest ; mettez ici le pas-à-pas détaillé (captures d'écran, dépannage…).
+[Plausible Analytics](https://plausible.io/) est un outil de statistiques web
+simple et respectueux de la vie privée, libre (AGPL), sur plausible.io ou
+auto-hébergé (Community Edition). Cette intégration amène les chiffres de vos
+sites Plausible dans Gladys : chaque site devient un appareil avec ses
+visiteurs en ce moment et ses visiteurs, visites, pages vues, taux de rebond,
+durée de visite et page la plus vue du jour. Des scènes peuvent réagir à un pic
+de visiteurs, au premier visiteur de la journée ou à un site qui ne reçoit plus
+de visite (script de suivi cassé), un widget de tableau de bord montre la
+journée d'un coup d'œil, et une action de scène met les chiffres d'un site dans
+un message.
 
-## Ce que vous obtenez
+Testée contre un vrai Plausible Community Edition 3.2.1 auto-hébergé (Docker,
+PostgreSQL et ClickHouse) ; pas encore sur plausible.io : vos retours sont les
+bienvenus sur [les issues](https://github.com/guim31/gladys-plausible/issues).
 
-Six appareils de démonstration apparaissent après l'installation : une
-station météo (vraies données Open-Meteo), un interrupteur, une lampe
-variable, une prise connectée avec mesure de puissance, un détecteur de
-mouvement et une caméra.
+## Ce qu'il vous faut
 
-## Configuration
+- Gladys Assistant 5.1.0 ou plus récent.
+- Un Plausible : sur [plausible.io](https://plausible.io/), ou votre propre
+  serveur (Community Edition 2.1 ou plus, la première avec l'API Stats v2),
+  joignable depuis la machine de Gladys.
+- Une **clé « Stats API »** de votre compte Plausible.
+- Les **domaines** des sites à suivre, tels qu'écrits dans Plausible (par
+  exemple `blog.example.org`) : une clé Stats API ne sait pas lister ses sites.
 
-1. Ouvrez l'onglet **Configuration** de l'intégration.
-2. Renseignez la **latitude** et la **longitude** que la station météo de
-   démonstration doit observer (Paris par défaut), et choisissez votre unité
-   de température. L'**intervalle de rafraîchissement** règle la fréquence
-   de lecture de la station météo et de la puissance de la prise : toutes
-   les 5 minutes par défaut, toutes les minutes au plus.
-3. Enregistrez : les appareils apparaissent dans l'onglet **Découverte**,
-   prêts à être ajoutés.
+À chaque lecture, l'intégration envoie une requête par site (les visiteurs en
+ce moment). Toutes les 15 minutes, elle lit aussi les chiffres du jour et la
+page la plus vue (deux requêtes par site) et, quand personne n'est sur un site,
+les visites des dernières heures. plausible.io accepte 600 requêtes par heure
+et par clé : là, l'intégration allonge d'elle-même l'intervalle pour rester
+sous 540 (avec 20 sites, une lecture toutes les 4 minutes). La Community
+Edition n'a pas cette limite.
 
-Le réglage **Préférer la connexion locale** pilote la prise de
-démonstration : elle affiche en badge le canal réellement utilisé (local ou
-cloud), avec un point orange quand elle fonctionne en mode dégradé (local
-refusé, bascule cloud).
+## Mise en route
 
-## Actions
+### 1. Créer une clé Stats API
 
-- **Tester le fournisseur météo** — effectue une requête en direct vers
-  Open-Meteo et affiche la température et l'humidité actuelles sous le
-  bouton.
-- **Identifier un appareil** — choisissez un de vos appareils dans la liste
-  et il se signale (la lampe de démonstration « clignote » dans les logs).
+Dans Plausible, ouvrez **Settings → API keys** (les réglages de votre compte),
+cliquez sur **New API key**, choisissez le type **Stats API** et copiez la clé
+(elle n'est affichée qu'une fois).
 
-## Scènes
+### 2. Configurer l'intégration
 
-L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys 5.1
-ou plus récent), dans la catégorie **Intégrations** :
+Dans Gladys, ouvrez **Intégrations → Plausible Analytics → Configuration** :
 
-- **Mouvement détecté** (déclencheur) — lance la scène quand un détecteur
-  de démonstration voit bouger quelque chose. Choisissez éventuellement le
-  détecteur et ce qui a bougé (personne, animal) ; laissés vides, toute
-  détection correspond. Les actions suivantes peuvent lire ce qui a bougé
-  avec `{{triggerEvent.data.target}}`.
-- **Identifier un appareil** (action) — fait se signaler l'appareil choisi.
-  Elle indique si l'appareil a pu se signaler, pour que les actions
-  suivantes puissent en dépendre.
+- **Adresse de Plausible** : vide pour plausible.io, ou l'adresse de votre
+  serveur (par exemple `http://192.168.1.10:8000`). Une adresse copiée depuis
+  le navigateur est comprise.
+- **Clé d'API** : la clé Stats API.
+- **Domaines des sites** : séparés par des virgules, 25 au plus.
+- **Visiteurs en ce moment : intervalle** : 1, 2 ou 5 minutes (1 minute par
+  défaut).
+- **Pic de visiteurs à partir de** : les visiteurs simultanés qui déclenchent
+  « Pic de visiteurs » (10 par défaut).
+- **Aucune visite depuis (heures)** : les heures sans aucune visite qui
+  déclenchent « Aucune visite depuis un moment » (24 par défaut).
+- **Langue des noms** : langue des noms des fonctionnalités et des résultats
+  de scène (français par défaut).
+
+Enregistrez, puis cliquez sur **Tester la connexion** : le résultat donne le
+nombre de sites, les visiteurs du jour et ceux du moment, et les domaines que
+Plausible refuse à la clé, s'il y en a.
+
+### 3. Ajouter les sites
+
+Ouvrez l'onglet **Découverte** : chaque site est proposé sous son domaine.
+Ajoutez ceux que vous voulez voir dans Gladys. Les déclencheurs de scène et le
+widget fonctionnent pour tous les sites, ajoutés ou non.
+
+## Les appareils
+
+Chaque site devient un appareil avec :
+
+- **Visiteurs en ce moment** : les visiteurs des 5 dernières minutes, comme les
+  « current visitors » de Plausible.
+- **Visiteurs aujourd'hui** : visiteurs uniques depuis minuit.
+- **Visites aujourd'hui** : visites (sessions) depuis minuit.
+- **Pages vues aujourd'hui** : pages vues depuis minuit.
+- **Taux de rebond aujourd'hui** : la part des visites qui n'ont vu qu'une
+  page, en pourcentage.
+- **Durée de visite aujourd'hui** : la durée moyenne d'une visite, en secondes.
+- **Page la plus vue aujourd'hui** : son chemin, par exemple `/posts/hello` ;
+  « - » avant la première page vue de la journée.
+
+« Aujourd'hui » est le jour du site dans Plausible, dans le fuseau horaire de
+ses réglages : les chiffres du jour repartent de 0 à son minuit. Les visiteurs
+en ce moment suivent l'intervalle de la configuration, les chiffres du jour
+sont lus toutes les 15 minutes, et tout de suite à l'arrivée d'un premier
+visiteur. Une valeur qui ne change pas est renvoyée toutes les 12 heures, pour
+que Gladys la garde récente.
 
 ## Tableau de bord
 
-Ajoutez le widget **État de la démo** à un tableau de bord : il affiche en
-direct la température de la station météo et la puissance de la prise du
-bureau, la connexion utilisée par la prise (en orange si dégradée) et la
-position observée. Son bouton **Identifier la lampe** fait se signaler la
-lampe de démonstration.
+Le widget **Plausible aujourd'hui** montre quatre tuiles (visiteurs en ce
+moment, visiteurs, visites et pages vues du jour), additionnées sur les sites
+affichés, puis une ligne par site avec ses visiteurs du jour et du moment, le
+plus fréquenté en premier. Avec un seul site, la page la plus vue du jour
+s'affiche à la place. Dans les réglages du widget, choisissez des sites pour
+n'afficher qu'eux (appareils ajoutés à Gladys). Le bouton **Actualiser** relit
+Plausible.
+
+## Scènes
+
+### Déclencheurs
+
+- **Pic de visiteurs** : les visiteurs en ce moment d'un site atteignent le
+  seuil de la configuration. Une fois par pic, et 30 minutes au moins entre
+  deux annonces pour un site : un pic qui dure encore à la fin de la pause est
+  annoncé à ce moment-là. Variables : domaine, visiteurs en ce moment, seuil.
+- **Premier visiteur de la journée** : un site reçoit son premier visiteur
+  depuis son minuit. Variables : domaine, visiteurs aujourd'hui. Un premier visiteur arrivé sans être vu (intégration arrêtée, Plausible injoignable ou domaine refusé pendant plus d'environ 15 minutes) n'est pas annoncé.
+- **Aucune visite depuis un moment** : un site qui avait des visites n'en
+  reçoit plus pendant les heures de la configuration : le script de suivi est
+  peut-être cassé, ou le site en panne. Une fois, jusqu'au retour d'une visite.
+  Variables : domaine, heures sans visite.
+
+Chaque déclencheur peut se limiter à certains sites (vide : tous). Ce que les
+déclencheurs retiennent est gardé dans le volume `/data` : un redémarrage de
+Gladys ou de l'intégration n'annonce pas deux fois un pic ou un premier
+visiteur. Rien n'est annoncé à la première lecture d'un site : un pic ou un
+silence déjà en cours est seulement noté.
+
+### Actions
+
+- **Lire les chiffres d'un site** : donne le domaine (`name`), les visiteurs en
+  ce moment (`active`), les `visitors`, `visits`, `pageviews`, `bounce_rate` et
+  `visit_duration` du jour, la `top_page`, et une `sentence` toute prête, par
+  exemple « blog.example.org : 132 visiteur(s) et 410 page(s) vue(s)
+  aujourd'hui, 4 en ce moment, page la plus vue /posts/hello. ».
+
+### Idées de scènes
+
+- Quand **Pic de visiteurs** se déclenche pour votre boutique, envoyer un
+  message Telegram « Affluence sur {{domain}} : {{visitors}} visiteurs en ce
+  moment ».
+- Quand **Aucune visite depuis un moment** se déclenche, envoyer une
+  notification « Aucune visite sur {{domain}} depuis {{hours}} h : vérifier le
+  script de suivi ».
+- Chaque soir à 21 h, **Lire les chiffres d'un site** et envoyer la `sentence`
+  par message.
+- Avec la fonctionnalité **Visiteurs en ce moment** en condition de scène,
+  allumer une lampe en vert tant que quelqu'un est sur le site.
 
 ## Dépannage
 
-L'intégration journalise tout ce qu'elle fait : consultez les logs de
-l'intégration depuis l'interface Gladys (ou `docker logs` sur l'hôte) avec
-`LOG_LEVEL=debug` pour le détail complet.
+- **« Collez une clé « Stats API » »** : la clé est vide.
+- **« Indiquez les domaines de vos sites »** : aucun domaine n'a pu être lu ;
+  écrivez-les comme dans Plausible, séparés par des virgules.
+- **« clé d'API refusée, ou aucun domaine connu de Plausible »** : Plausible
+  répond de la même façon à une mauvaise clé et à un site que la clé ne voit
+  pas. Recopiez la clé (type Stats API) et vérifiez les domaines. Si seuls
+  certains domaines sont refusés, les autres sont lus, et **Tester la
+  connexion** nomme les domaines refusés.
+- **« aucune API Stats de Plausible à cette adresse »** : vérifiez l'adresse et
+  le port (8000 par défaut), et la version (Community Edition 2.1 ou plus).
+- **« l'adresse redirige »** : saisissez directement l'adresse en `https://`.
+- **« trop de requêtes »** : choisissez un intervalle plus long, ou suivez
+  moins de sites.
+- Les logs de l'intégration (**Intégrations → Plausible Analytics**) en disent
+  plus ; rien n'y est écrit pendant un cycle de lecture normal.
+
+## Limites
+
+- Lecture seule : l'intégration ne change rien dans Plausible.
+- Les domaines se saisissent à la main : une clé Stats API ne sait pas lister
+  les sites (la Sites API n'existe pas dans la Community Edition, et elle est
+  réservée à l'offre Enterprise sur plausible.io). Un site renommé dans
+  Plausible doit l'être aussi dans la configuration, et devient un nouvel
+  appareil.
+- « Visiteurs en ce moment » est la fenêtre de 5 minutes de Plausible ; les
+  chiffres du jour ont au plus 15 minutes, sauf au premier visiteur.
+- Un compte Plausible (plausible.io ou un serveur) par intégration, 25 sites au
+  plus.
+- Les seuils de « Pic de visiteurs » et « Aucune visite depuis un moment » sont
+  les mêmes pour tous les sites.
+- Pas encore testée sur plausible.io, et sans lien avec Plausible Insights OÜ.
