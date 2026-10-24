@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-24
+
 ### Added
 
 - First version: the sites of a Plausible Analytics account (plausible.io, or a
@@ -22,4 +24,5 @@ the notes of the version's GitHub Release.
 - Dashboard widget "Plausible today".
 - "Test the connection" action, texts in English, French, German and Spanish.
 
-[Unreleased]: https://github.com/guim31/gladys-plausible/commits/main
+[Unreleased]: https://github.com/guim31/gladys-plausible/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/guim31/gladys-plausible/releases/tag/v1.0.0
